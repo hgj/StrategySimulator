@@ -1,0 +1,80 @@
+//
+// StrategySimulator 1.6.0
+//
+// This file is part of the StrategySimulator framework, licensed under a
+// Creative Commons Attribution-ShareAlike 3.0 Unported License.
+// To view a copy of this license, see the LICENCE file, or visit
+// http://creativecommons.org/licenses/by-nc-sa/4.0/
+//
+// For more information, visit the project's website at GitHub:
+// https://github.com/hgj/StrategySimulator
+//
+
+subprojects {
+	apply plugin: 'java'
+
+	version = '1.6.0'
+
+	sourceCompatibility = '1.7'
+
+	sourceSets {
+		main {
+			java {
+				srcDir 'src'
+			}
+		}
+	}
+
+	repositories {
+		mavenCentral()
+	}
+
+	dependencies {
+		compile 'org.slf4j:slf4j-api:1.7.+', 'org.slf4j:slf4j-simple:1.7.+'
+		compile fileTree(dir: '../lib', include: '*.jar')
+		runtime 'org.slf4j:slf4j-api:1.7.+', 'org.slf4j:slf4j-simple:1.7.+'
+		runtime fileTree(dir: '../lib', include: '*.jar')
+	}
+
+	jar {
+		destinationDir = file("../dist")
+		manifest {
+			attributes('Class-Path': configurations.runtime.files.collect { 'lib/' + it.name }.join(' '))
+		}
+	}
+}
+
+configure(subprojects.findAll {it.name != 'StrategySimulatorLibrary'}) {
+	dependencies {
+		compile project(':StrategySimulatorLibrary');
+	}
+}
+
+configure(subprojects.findAll {it.name == 'EmptyGame' || it.name == 'Gomoku'}) {
+	task copyConf(type: Copy) {
+		from('src') {
+			include '**/*.conf'
+		}
+		into '../dist'
+		includeEmptyDirs = false
+		eachFile { details ->
+			details.path = details.path.replaceAll('.+/([^/]+)', { "../dist/${it[1]}" })
+		}
+	}
+	build.dependsOn(copyConf)
+}
+
+project(':StrategySimulator') {
+	apply plugin: 'application'
+	mainClassName = 'StrategySimulator.Main'
+	jar {
+		manifest {
+			attributes('Main-Class': mainClassName)
+		}
+	}
+	task libs(type: Sync) {
+		from configurations.runtime
+		into '../dist/lib'
+	}
+	build.dependsOn(libs)
+}
